@@ -76,10 +76,13 @@ public class Player {
 
     public void attack(Player d, String place) {
 
-        String[] placeSplit = place.split(" ");
+//        String[] placeSplit = place.split(" ");
+//
+//        int digit = Integer.parseInt(placeSplit[0].substring(0, placeSplit[0].length() - 1)) - 1;
+//        int letter = placeSplit[0].charAt(placeSplit[0].length() - 1) - 65;
 
-        int digit = Integer.parseInt(placeSplit[0].substring(0, placeSplit[0].length() - 1)) - 1;
-        int letter = placeSplit[0].charAt(placeSplit[0].length() - 1) - 65;
+        int digit = Game.GAME.parseDigit(place);
+        int letter = Game.GAME.parseLetter(place);
 
         if (d.getField()[digit][letter] == '1') {
             d.getField()[digit][letter] = 'X';

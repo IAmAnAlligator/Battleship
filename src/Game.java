@@ -1,11 +1,12 @@
+import java.io.IOException;
 import java.util.*;
 
 public class Game {
-
     private final String BATTLESHIP = "Battleship";
     private final String CRUISER = "Cruiser";
     private final String DESTROYER = "Destroyer";
     private final String SUBMARINE = "Submarine";
+    private final String ABCDEFGHIJ = "   A  B  C  D  E  F  G  H  I  J";
 
     static final Game GAME = new Game();
     private final Scanner SCANNER = new Scanner(System.in);
@@ -18,20 +19,7 @@ public class Game {
         System.out.println("Enter your name, please:");
         PLAYER.setName(SCANNER.nextLine());
 
-        System.out.println("Hello " + PLAYER.getName() + "!");
-        System.out.println("Enter 1 - Play on random field");
-        System.out.println("Enter 2 - Initialize field by your own");
-        System.out.println("Press 0 at any step to exit");
-        String choose = SCANNER.nextLine();
-
-        if (choose.equals("1")) {
-            GAME.initRandomField(PLAYER);
-        } else if (choose.equals("2")) {
-            GAME.showField(PLAYER.getField());
-            GAME.initField(PLAYER);
-        } else {
-            return;
-        }
+        menuInitField();
 
         System.out.println("Your field is: ");
         showField(PLAYER.getField(), PLAYER.getGameProcessField());
@@ -39,6 +27,33 @@ public class Game {
         BOT.setName("Bot");
         GAME.initRandomField(BOT);
 
+        battleInput();
+    }
+
+    private void menuInitField() {
+        System.out.println("Hello " + PLAYER.getName() + "!");
+        System.out.println("Enter 1 - Play on random field");
+        System.out.println("Enter 2 - Initialize field by your own");
+
+        String choose = SCANNER.nextLine();
+
+        boolean success = false;
+
+        if (choose.equals("1")) {
+            GAME.initRandomField(PLAYER);
+        } else if (choose.equals("2")) {
+            GAME.showField(PLAYER.getField());
+            while (!success) {
+                if (initField(PLAYER)) {
+                    success = true;
+                } else {
+                    System.out.println("Incorrect field, try again");
+                }
+            }
+        }
+    }
+
+    private void battleInput() {
         List<String> places = PLAYER.getListOfPlaces();
 
         while (PLAYER.isFleetActive() && BOT.isFleetActive()) {
@@ -48,18 +63,13 @@ public class Game {
             boolean success = false;
 
             while (!success) {
-
                 try {
                     String place = SCANNER.nextLine();
-                    if (place.equals("0")) {
-                        return;
-                    }
-                    PLAYER.attack(BOT, place);
+                    PLAYER.attack(BOT, place.toUpperCase());
                     success = true;
-                } catch (NumberFormatException e) {
+                } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
                     System.out.println("Incorrect input, try again");
                 }
-
             }
 
             String shoot = getPlaceForAttack(places);
@@ -69,7 +79,6 @@ public class Game {
         }
 
         System.out.println(PLAYER.isFleetActive() ? "Congratulations!\nYou won!" : "You lost!");
-
     }
 
     private String getPlaceForAttack(List<String> places) {
@@ -104,25 +113,52 @@ public class Game {
 
     }
 
+    private boolean isPlaceFree(char[][] playerField, List<String> place) {
+        for (String s : place) {
+            if (playerField[parseDigit(s)][parseLetter(s)] == '1') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isSizeCorrect(int size, int placeLength) {
+        return size == placeLength;
+    }
+
     private Ship initShip(char[][] playerField, String shipClass, int size) {
+
         while (true) {
             try {
-                String place = SCANNER.nextLine();
-                Ship ship = new Ship(shipClass, size, List.of(place.split(" ")));
+                String place = SCANNER.nextLine().toUpperCase();
+                List<String> placeSplit = List.of(place.split(" "));
+
+                if (!isPlaceFree(playerField, placeSplit)) {
+                    throw new IOException();
+                }
+
+                if (!isSizeCorrect(size, placeSplit.size())) {
+                    throw new IOException();
+                }
+
+                Ship ship = new Ship(shipClass, size, placeSplit);
                 GAME.addShip(playerField, ship);
+
                 return ship;
-            } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+
+            } catch (IOException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
                 System.out.println("Incorrect input, try again");
             }
         }
     }
 
-    private void initField(Player player) {
+    private boolean initField(Player player) {
 
         char[][] playerField = player.getField();
 
         System.out.println("Enter coordinates for your " + BATTLESHIP + ", 4 squares:");
-        System.out.println("e.g. A1 B1 C1 D1");
+        System.out.println("e.g. 1A 1B 1C 1D");
         Ship battleship = initShip(playerField, BATTLESHIP, 4);
         GAME.showField(playerField);
 
@@ -162,17 +198,45 @@ public class Game {
         Ship submarineD = initShip(playerField, SUBMARINE, 1);
         GAME.showField(playerField);
 
-        player.setFleet(new ArrayList<>(Arrays.asList(
-                battleship,
-                cruiserA,
-                cruiserB,
-                destroyerA,
-                destroyerB,
-                destroyerC,
-                submarineA,
-                submarineB,
-                submarineC,
-                submarineD)));
+        if (FieldValidator.fieldValidator(convertToIntField(playerField))) {
+            player.setFleet(new ArrayList<>(Arrays.asList(
+                    battleship,
+                    cruiserA,
+                    cruiserB,
+                    destroyerA,
+                    destroyerB,
+                    destroyerC,
+                    submarineA,
+                    submarineB,
+                    submarineC,
+                    submarineD)));
+            return true;
+        }
+
+        clearField(playerField);
+        return false;
+    }
+
+    private void clearField(char[][] playerField) {
+        for (char[] chars : playerField) {
+            Arrays.fill(chars, '0');
+        }
+    }
+
+    private int[][] convertToIntField(char[][] playerField) {
+        int[][] result = new int[10][10];
+
+        for (int i = 0; i < playerField.length; i++) {
+            for (int j = 0; j < playerField[i].length; j++) {
+                if (playerField[i][j] == '1') {
+                    result[i][j] = 1;
+                } else {
+                    result[i][j] = 0;
+                }
+            }
+        }
+
+        return result;
     }
 
     private void initRandomField(Player player) {
@@ -227,7 +291,7 @@ public class Game {
 
     private void showField(char[][] playerField) {
 
-        System.out.println("   A  B  C  D  E  F  G  H  I  J");
+        System.out.println(ABCDEFGHIJ);
 
         for (int i = 0; i < playerField.length; i++) {
             if (i == playerField.length - 1) {
@@ -252,7 +316,7 @@ public class Game {
 
     private void showField(char[][] playerField, char[][] gameProcessField) {
 
-        System.out.println("   A  B  C  D  E  F  G  H  I  J         A  B  C  D  E  F  G  H  I  J");
+        System.out.println(ABCDEFGHIJ + "      " + ABCDEFGHIJ);
 
         for (int i = 0; i < playerField.length; i++) {
             if (i == playerField.length - 1) {
@@ -288,16 +352,19 @@ public class Game {
     }
 
     private void addShip(char[][] field, Ship ship) {
-
-        int digit;
-        int letter;
-
         for (int i = 0; i < ship.getPlace().size(); i++) {
-            digit = Integer.parseInt(ship.getPlace().get(i)
-                    .substring(0, ship.getPlace().get(i).length() - 1)) - 1;
-            letter = ship.getPlace().get(i).charAt(ship.getPlace().get(i).length() - 1) - 65;
-
-            field[digit][letter] = '1';
+            field[parseDigit(ship.getPlace().get(i))][parseLetter(ship.getPlace().get(i))] = '1';
         }
     }
+
+    public int parseDigit(String input) {
+        return Integer.parseInt(input
+                .substring(0, input.length() - 1)) - 1;
+    }
+
+    public int parseLetter(String input) {
+        return input.toUpperCase().charAt(input.length() - 1) - 65;
+    }
 }
+
+
