@@ -32,8 +32,8 @@ public class Game {
 
     private void menuInitField() {
         System.out.println("Hello " + PLAYER.getName() + "!");
-        System.out.println("Enter 1 - Play on random field");
-        System.out.println("Enter 2 - Initialize field by your own");
+        System.out.println("Enter 1 - Play on a random field");
+        System.out.println("Enter 2 - Initialize a field by your own");
 
         String choose = SCANNER.nextLine();
 
